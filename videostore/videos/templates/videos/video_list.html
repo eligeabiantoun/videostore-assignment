@@ -1,0 +1,35 @@
+{% extends "videos/base.html" %}
+{% block content %}
+<h1>Videos</h1>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-auto">
+    <input name="q" class="form-control" placeholder="Search title…" value="{{ q }}">
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-outline-secondary">Search</button>
+  </div>
+</form>
+
+<table class="table table-striped">
+  <thead><tr>
+    <th>MovieID</th><th>MovieTitle</th><th>Genre</th><th>ReleaseYear</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for v in videos %}
+    <tr>
+      <td>{{ v.MovieID }}</td>
+      <td><a href="{% url 'video_detail' v.pk %}">{{ v.MovieTitle }}</a></td>
+      <td>{{ v.MovieGenre }}</td>
+      <td>{{ v.ReleaseYear }}</td>
+      <td>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'video_update' v.pk %}">Edit</a>
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'video_delete' v.pk %}">Delete</a>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">No videos yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
