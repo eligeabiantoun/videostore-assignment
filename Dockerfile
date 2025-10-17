@@ -5,21 +5,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System deps (kept minimal; Pillow uses wheels on slim)
+# Minimal OS deps (tini is optional but nice)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tini \
  && rm -rf /var/lib/apt/lists/*
 
+# Python deps
 COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy project last (better layer caching while you iterate on requirements)
+# App code
 COPY . /app/
 
-# Use tini as PID 1 for signal handling
-RUN chmod +x /app/videostore/entrypoint.sh
+# Make sure entrypoint is executable and has LF endings (avoid CRLF issues)
+RUN chmod +x /app/videostore/entrypoint.sh && sed -i 's/\r$//' /app/videostore/entrypoint.sh
 
-# runs migrations then starts Django
+# (Optional) use tini as PID 1 for clean signals
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Run your app (entrypoint script calls manage.py inside videostore/)
 CMD ["./videostore/entrypoint.sh"]
 
 EXPOSE 8000
