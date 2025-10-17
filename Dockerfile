@@ -20,6 +20,6 @@ COPY . /app/
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # runs migrations then starts Django
-CMD ["./entrypoint.sh"]
+CMD ["./scripts/entrypoint.sh"]
 
 EXPOSE 8000
