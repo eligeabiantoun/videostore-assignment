@@ -17,9 +17,9 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # Use tini as PID 1 for signal handling
-ENTRYPOINT ["/usr/bin/tini", "--"]
+RUN chmod +x /app/videostore/entrypoint.sh
 
 # runs migrations then starts Django
-CMD ["./scripts/entrypoint.sh"]
+CMD ["./videostore/entrypoint.sh"]
 
 EXPOSE 8000
