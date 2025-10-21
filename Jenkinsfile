@@ -35,9 +35,13 @@ pipeline {
     }
 
     stage('Expose URL') {
-      steps {
-        sh 'minikube service videostore-service --url'
-      }
-    }
+  steps {
+    sh '''
+      NODE_IP=$(minikube ip)
+      NODE_PORT=$(kubectl get svc videostore-service -o jsonpath='{.spec.ports[0].nodePort}')
+      echo "Video Store URL: http://$NODE_IP:$NODE_PORT"
+    '''
+  }
+}
   }
 }
