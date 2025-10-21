@@ -1,100 +1,42 @@
 pipeline {
   agent any
 
-  // Same behavior as the tutorial: poll Git every ~2 minutes
+  // Same trigger cadence as the tutorial
   triggers { pollSCM('H/2 * * * *') }
-
-  // Make sure Homebrew paths are visible inside Jenkins shells
-  environment {
-    // include both common Homebrew prefixes
-    PATH = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
-    IMAGE_NAME = "videostore:latest"
-    DEPLOYMENT = "videostore-deployment"
-    SERVICE    = "videostore-service"
-  }
-
-  options {
-    timestamps()
-    ansiColor('xterm')
-  }
 
   stages {
 
-    // If your job is "Pipeline script from SCM", Jenkins already checks out,
-    // but we keep this for clarity and logs.
+    // Matches the tutorial's Checkout stage (Pipeline-from-SCM jobs will still log this nicely)
     stage('Checkout') {
-      steps { checkout scm }
-    }
-
-    stage('Env check') {
       steps {
-        sh '''
-          echo "PATH=$PATH"
-          which docker || true
-          which minikube || true
-          which kubectl || true
-          docker --version || true
-          minikube version || true
-          kubectl version --client || true
-        '''
+        git branch: 'main', url: 'https://github.com/eligeabiantoun/videostore-assignment.git'
       }
     }
 
-    stage('Ensure Minikube up') {
-      steps {
-        sh '''
-          # Start Minikube if not running (idempotent)
-          minikube status || minikube start --driver=docker
-          # Point Docker to Minikube's Docker daemon (very important)
-          eval $(minikube docker-env)
-          docker info >/dev/null 2>&1 || { echo "Docker not reachable"; exit 1; }
-        '''
-      }
-    }
-
+    // Build the image INSIDE Minikube's Docker daemon (tutorial's docker-env + build)
     stage('Build in Minikube Docker') {
       steps {
         sh '''
+          # Point Docker to Minikube
           eval $(minikube docker-env)
-          docker build -t ${IMAGE_NAME} .
-          docker images | grep videostore || { echo "Image not built"; exit 1; }
+
+          # Build your Video Store image
+          docker build -t videostore:latest .
         '''
       }
     }
 
+    // Apply manifests and wait for successful rollout (tutorial's kubectl apply + rollout status)
     stage('Deploy to Minikube') {
       steps {
         sh '''
-          # Apply k8s manifests (same structure as the tutorial, renamed for videostore)
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
-          # Wait for rollout to complete
-          kubectl rollout status deployment/${DEPLOYMENT} --timeout=120s
-
-          echo "Pods:"
-          kubectl get pods -l app=videostore-app -o wide
+          # Wait until the Deployment is rolled out
+          kubectl rollout status deployment/videostore-deployment
         '''
       }
-    }
-
-    stage('Expose URL') {
-      steps {
-        sh '''
-          # Print the service URL so it's easy to click in the logs
-          URL=$(minikube service ${SERVICE} --url)
-          echo "Video Store is available at: $URL"
-        '''
-      }
-    }
-  }
-
-  post {
-    failure {
-      echo "Build failed. Check earlier stages for PATH/minikube/docker issues."
-    }
-    success {
-      echo "✅ Deployed ${IMAGE_NAME} to Minikube and exposed via NodePort."
     }
   }
 }
